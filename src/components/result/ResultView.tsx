@@ -193,7 +193,7 @@ export function ResultView() {
       <div className="mt-6">
         {activeTab === "diagnostico" && (
           <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
+            <div className="min-w-0 lg:col-span-2">
               <RequirementsList requisitos={result.requisitos} />
             </div>
             <GapsAndKeywords
@@ -252,13 +252,13 @@ export function ResultView() {
             )}
 
             <div className="grid gap-6 xl:grid-cols-3">
-              <div className="xl:col-span-2">
+              <div className="min-w-0 xl:col-span-2">
                 <ResumeEditor
                   curriculo={result.curriculo}
                   onChange={handleResumeChange}
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <ChangeLog alteracoes={result.alteracoes} />
               </div>
             </div>

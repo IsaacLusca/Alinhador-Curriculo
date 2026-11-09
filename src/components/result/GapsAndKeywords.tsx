@@ -12,7 +12,7 @@ export function GapsAndKeywords({
   keywordsAusentes,
 }: GapsAndKeywordsProps) {
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
           <AlertTriangle className="h-4 w-4 text-amber-500" aria-hidden />

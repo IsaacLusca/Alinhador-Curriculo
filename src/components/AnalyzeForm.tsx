@@ -167,7 +167,7 @@ export function AnalyzeForm() {
   return (
     <div className="mt-10">
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60">
+        <section className="flex min-w-0 flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60">
           <StepHeading
             number={1}
             title="Seu currículo mestre"
@@ -186,7 +186,7 @@ export function AnalyzeForm() {
           />
         </section>
 
-        <section className="flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60">
+        <section className="flex min-w-0 flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60">
           <StepHeading
             number={2}
             title="Descrição da vaga"
@@ -235,8 +235,8 @@ export function AnalyzeForm() {
             Tudo pronto para alinhar?
           </p>
           <p className="text-sm text-slate-500">
-            A análise leva em torno de 30 segundos e não envia seu currículo
-            para nenhum servidor de armazenamento.
+            A análise leva em torno de 30 segundos. O texto extraído é enviado
+            à API do Gemini e o resultado fica salvo apenas no seu navegador.
           </p>
         </div>
         <button

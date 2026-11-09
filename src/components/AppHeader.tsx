@@ -21,7 +21,7 @@ export function AppHeader() {
 
         <span className="hidden items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 sm:inline-flex">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
-          Seus dados ficam no navegador
+          Leitura local do .docx
         </span>
       </div>
     </header>

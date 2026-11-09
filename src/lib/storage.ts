@@ -103,6 +103,7 @@ export function parseStoredResult(raw: string): AlignmentResult | null {
 
     if (
       typeof parsed.score !== "number" ||
+      !parsed.vaga ||
       !parsed.curriculo ||
       !Array.isArray(parsed.requisitos)
     ) {
