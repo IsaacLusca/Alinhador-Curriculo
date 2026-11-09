@@ -72,5 +72,10 @@ export async function analyzeAlignment(
     temperatura: 0.3,
   });
 
-  return buildAlignmentResult(payload, masterResume, getModelName());
+  return buildAlignmentResult(
+    payload,
+    masterResume,
+    jobProfile,
+    getModelName(),
+  );
 }

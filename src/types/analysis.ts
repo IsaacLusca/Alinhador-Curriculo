@@ -44,10 +44,17 @@ export interface ResultMeta {
   modelo: string;
 }
 
+export interface JobSummary {
+  cargo: string;
+  empresa?: string;
+  senioridade?: string;
+}
+
 export interface AlignmentResult
   extends Omit<AnalysisPayload, "curriculo"> {
   score: number;
   nivel: AlignmentLevel;
+  vaga: JobSummary;
   curriculo: TailoredResume;
   meta: ResultMeta;
 }

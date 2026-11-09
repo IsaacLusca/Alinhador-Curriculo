@@ -1,5 +1,6 @@
 import type {
   AnalysisPayload,
+  JobProfile,
   MasterResume,
 } from "@/lib/schemas";
 import { classifyAlignment, computeAlignmentScore } from "@/lib/scoring";
@@ -52,6 +53,7 @@ function cleanProject(
 export function buildAlignmentResult(
   payload: AnalysisPayload,
   masterResume: MasterResume,
+  jobProfile: JobProfile,
   model: string,
 ): AlignmentResult {
   const score = computeAlignmentScore(payload.categorias);
@@ -79,6 +81,11 @@ export function buildAlignmentResult(
     ...payload,
     score,
     nivel: classifyAlignment(score),
+    vaga: {
+      cargo: jobProfile.cargo,
+      empresa: jobProfile.empresa?.trim() || undefined,
+      senioridade: jobProfile.senioridade?.trim() || undefined,
+    },
     curriculo: {
       nome: masterResume.nome,
       titulo: payload.curriculo.titulo?.trim() || masterResume.titulo,

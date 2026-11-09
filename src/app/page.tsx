@@ -1,15 +1,13 @@
 import { Sparkles } from "lucide-react";
 import { AnalyzeForm } from "@/components/AnalyzeForm";
+import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
+import { PageBackground } from "@/components/PageBackground";
 
 export default function Home() {
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-indigo-200/40 blur-3xl" />
-        <div className="absolute right-[-12rem] top-48 h-80 w-80 rounded-full bg-sky-200/40 blur-3xl" />
-        <div className="absolute bottom-[-10rem] left-[-8rem] h-80 w-80 rounded-full bg-violet-200/30 blur-3xl" />
-      </div>
+      <PageBackground />
 
       <AppHeader />
 
@@ -35,15 +33,7 @@ export default function Home() {
         <AnalyzeForm />
       </main>
 
-      <footer className="relative border-t border-slate-200/80 bg-white/60 py-6">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-2 px-4 text-xs text-slate-500 sm:flex-row sm:px-6 lg:px-8">
-          <p>
-            O arquivo .docx é lido no seu navegador. Nada é armazenado em
-            servidores.
-          </p>
-          <p>Currículo adaptado sempre com revisão humana antes de enviar.</p>
-        </div>
-      </footer>
+      <AppFooter />
     </div>
   );
 }
