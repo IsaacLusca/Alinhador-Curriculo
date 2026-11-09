@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import {
   ArrowLeft,
+  Download,
+  FileDown,
   FileText,
   Lightbulb,
+  Loader2,
   ScanSearch,
   Target,
 } from "lucide-react";
@@ -17,6 +20,8 @@ import { RequirementsList } from "@/components/result/RequirementsList";
 import { ResumeEditor } from "@/components/result/ResumeEditor";
 import { ScoreBreakdown } from "@/components/result/ScoreBreakdown";
 import { ScoreGauge } from "@/components/result/ScoreGauge";
+import { downloadResumeDocx } from "@/lib/export-docx";
+import { downloadResumePdf } from "@/lib/export-pdf";
 import { ALIGNMENT_LEVEL_DESCRIPTION } from "@/lib/labels";
 import {
   getResultRaw,
@@ -43,6 +48,8 @@ export function ResultView() {
   );
   const result = useMemo(() => parseStoredResult(raw), [raw]);
   const [activeTab, setActiveTab] = useState<TabId>("diagnostico");
+  const [exporting, setExporting] = useState<"pdf" | "docx" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const handleResumeChange = (
     updater: (current: TailoredResume) => TailoredResume,
@@ -51,6 +58,29 @@ export function ResultView() {
     if (!current) return;
 
     setStoredResult({ ...current, curriculo: updater(current.curriculo) });
+  };
+
+  const handleExport = async (format: "pdf" | "docx") => {
+    const current = parseStoredResult(getResultRaw());
+    if (!current) return;
+
+    setExporting(format);
+    setExportError(null);
+
+    try {
+      if (format === "pdf") {
+        await downloadResumePdf(current.curriculo);
+      } else {
+        await downloadResumeDocx(current.curriculo);
+      }
+    } catch (exportFailure) {
+      console.error("Erro ao exportar currículo:", exportFailure);
+      setExportError(
+        "Não foi possível gerar o arquivo. Tente novamente em instantes.",
+      );
+    } finally {
+      setExporting(null);
+    }
   };
 
   if (!result) {
@@ -175,15 +205,62 @@ export function ResultView() {
         )}
 
         {activeTab === "curriculo" && (
-          <div className="grid gap-6 xl:grid-cols-3">
-            <div className="xl:col-span-2">
-              <ResumeEditor
-                curriculo={result.curriculo}
-                onChange={handleResumeChange}
-              />
+          <div>
+            <div className="mb-4 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  Exportar currículo alinhado
+                </p>
+                <p className="text-xs text-slate-500">
+                  O arquivo é gerado com os itens incluídos e as suas edições.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleExport("pdf")}
+                  disabled={exporting !== null}
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {exporting === "pdf" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <FileDown className="h-4 w-4" aria-hidden />
+                  )}
+                  Baixar PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExport("docx")}
+                  disabled={exporting !== null}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {exporting === "docx" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Download className="h-4 w-4" aria-hidden />
+                  )}
+                  Baixar DOCX
+                </button>
+              </div>
             </div>
-            <div>
-              <ChangeLog alteracoes={result.alteracoes} />
+
+            {exportError && (
+              <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+                {exportError}
+              </p>
+            )}
+
+            <div className="grid gap-6 xl:grid-cols-3">
+              <div className="xl:col-span-2">
+                <ResumeEditor
+                  curriculo={result.curriculo}
+                  onChange={handleResumeChange}
+                />
+              </div>
+              <div>
+                <ChangeLog alteracoes={result.alteracoes} />
+              </div>
             </div>
           </div>
         )}
