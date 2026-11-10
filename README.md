@@ -35,28 +35,32 @@ Variáveis de ambiente:
 
 1. Arraste o `.docx` do seu currículo completo. O arquivo é lido no navegador com `mammoth`; revise o texto extraído se necessário.
 2. Cole a descrição da vaga (responsabilidades, requisitos e diferenciais).
-3. Clique em **Analisar alinhamento**.
-4. Revise o diagnóstico e as recomendações.
-5. Na aba **Currículo alinhado**, ajuste textos, reative ou remova itens e baixe em **PDF** ou **DOCX**.
+3. Escolha o idioma do currículo gerado (português ou inglês).
+4. Clique em **Analisar alinhamento**.
+5. Revise o diagnóstico e as recomendações.
+6. Na aba **Currículo alinhado**, ajuste textos, reative ou remova itens e baixe em **PDF** ou **DOCX**.
 
 ## Como funciona
 
 1. O `.docx` é convertido em texto estruturado no navegador (nada é enviado ao servidor além do texto extraído).
-2. `POST /api/analyze` faz três chamadas ao Gemini:
+2. `POST /api/analyze` faz quatro chamadas ao Gemini:
    - extração estruturada do currículo mestre;
    - extração dos requisitos da vaga;
-   - análise de alinhamento + geração do currículo adaptado.
-3. O score é calculado no código com pesos fixos e transparentes:
+   - análise de alinhamento (requisitos, lacunas, palavras-chave e recomendações);
+   - adaptação do currículo em uma chamada separada, com limites calculados pelo nível da vaga.
+3. Parte do score é calculada no código, não pelo modelo:
 
-   | Categoria | Peso |
-   | --- | --- |
-   | Tecnologias e ferramentas | 40% |
-   | Experiências e atividades | 25% |
-   | Senioridade | 15% |
-   | Formação e idiomas | 10% |
-   | Palavras-chave | 10% |
+   | Categoria | Peso | Cálculo |
+   | --- | --- | --- |
+   | Tecnologias e ferramentas | 40% | requisitos `skill` ponderados por prioridade e status |
+   | Experiências e atividades | 25% | nota do modelo |
+   | Senioridade | 15% | tempo de experiência extraído das datas vs. nível da vaga |
+   | Formação e idiomas | 10% | nota do modelo |
+   | Palavras-chave | 10% | termos encontrados / (encontrados + ausentes), conferidos no currículo |
 
-4. As respostas usam JSON Schema + validação Zod, com nova tentativa automática em caso de formato inválido.
+   Requisitos obrigatórios ausentes aplicam um teto ao score final (69 com 1 ausência, 54 com 2 ou mais).
+
+4. As respostas usam JSON Schema + validação Zod. Antes de exibir o resultado, uma camada de fidelidade verifica no código se evidências são trechos literais do mestre, se empresas/cargos/datas/formações/idiomas foram preservados e se tecnologias não foram movidas entre itens. Se houver violação, uma chamada curta de reparo tenta corrigir; se ainda falhar, o item original do mestre é restaurado.
 5. Se o modelo principal estiver indisponível (erro 503/429), a análise tenta automaticamente os modelos de fallback.
 6. Os dados ficam no `localStorage` do navegador. Não há banco de dados.
 
@@ -90,10 +94,14 @@ src/
     ResumeUpload.tsx       # drag & drop e revisão do texto extraído
     result/                # score, requisitos, recomendações, editor, PDF
   lib/
-    alignment.ts           # orquestra extração e análise
-    prompts.ts             # prompts em português
+    alignment.ts           # orquestra extração, análise, adaptação e reparo
+    prompts.ts             # prompts em português/inglês
     schemas.ts             # schemas Zod e JSON Schema
-    scoring.ts             # cálculo do score
+    scoring.ts             # pesos, score de requisitos, teto de obrigatórios
+    seniority.ts           # parsing de datas e score de senioridade
+    text.ts                # normalização, aliases e análise de keywords
+    fidelity.ts            # validação e restauração de fidelidade ao mestre
+    limits.ts              # limites de conteúdo por nível da vaga
     tailoring.ts           # montagem do resultado final
     docx-parser.ts         # leitura do DOCX no navegador
     export-docx.ts         # geração de DOCX
@@ -117,5 +125,6 @@ npm run typecheck  # checagem de tipos
 
 - Apenas `.docx` é aceito (`.doc` antigo não é suportado).
 - Currículos com layouts muito complexos (tabelas, múltiplas colunas) podem perder estrutura na leitura; o texto extraído é editável antes da análise.
-- A IA pode errar. Revise sempre o currículo antes de enviar a um recrutador.
+- A IA pode errar. A validação de fidelidade reduz o risco e restaura dados do mestre, mas revise sempre o currículo antes de enviar a um recrutador.
 - O free tier do Gemini tem limites de requisições por minuto/dia.
+- Os limites de score (75/45) ainda não foram calibrados com um conjunto grande de vagas; ajuste em `src/lib/scoring.ts` se necessário.
