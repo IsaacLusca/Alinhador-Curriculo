@@ -28,7 +28,8 @@ Variáveis de ambiente:
 | Variável | Obrigatória | Descrição |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | Sim | Chave da Gemini Developer API. Fica apenas no servidor. |
-| `GEMINI_MODEL` | Não | Modelo usado na análise. Padrão: `gemini-3.8-flash`. |
+| `GEMINI_MODEL` | Não | Modelo principal. Padrão: `gemini-3.5-flash`. |
+| `GEMINI_FALLBACK_MODELS` | Não | Modelos alternativos em caso de indisponibilidade, separados por vírgula. Padrão: `gemini-2.5-flash,gemini-3.8-flash`. |
 
 ## Como usar
 
@@ -56,7 +57,8 @@ Variáveis de ambiente:
    | Palavras-chave | 10% |
 
 4. As respostas usam JSON Schema + validação Zod, com nova tentativa automática em caso de formato inválido.
-5. Os dados ficam no `localStorage` do navegador. Não há banco de dados.
+5. Se o modelo principal estiver indisponível (erro 503/429), a análise tenta automaticamente os modelos de fallback.
+6. Os dados ficam no `localStorage` do navegador. Não há banco de dados.
 
 ## Privacidade
 
