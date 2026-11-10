@@ -1,9 +1,10 @@
-import { Check, Pencil, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, Check, Pencil, RefreshCw, X } from "lucide-react";
 import { CHANGE_TYPE_LABEL } from "@/lib/labels";
 import type { ChangeLogEntry, ChangeType } from "@/lib/schemas";
 
 interface ChangeLogProps {
   alteracoes: ChangeLogEntry[];
+  avisos?: string[];
 }
 
 const CHANGE_STYLES: Record<
@@ -16,7 +17,7 @@ const CHANGE_STYLES: Record<
   mantido: { icon: Check, classes: "bg-emerald-50 text-emerald-600" },
 };
 
-export function ChangeLog({ alteracoes }: ChangeLogProps) {
+export function ChangeLog({ alteracoes, avisos }: ChangeLogProps) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60">
       <h2 className="text-lg font-semibold text-slate-900">
@@ -26,6 +27,20 @@ export function ChangeLog({ alteracoes }: ChangeLogProps) {
         Cada corte e reescrita tem um motivo ligado à vaga. Reative o que
         discordar no editor.
       </p>
+
+      {avisos && avisos.length > 0 && (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-800">
+            <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+            Validação de fidelidade
+          </p>
+          <ul className="mt-1.5 list-disc space-y-1 pl-5 text-xs text-amber-800">
+            {avisos.map((aviso) => (
+              <li key={aviso}>{aviso}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {alteracoes.length === 0 ? (
         <p className="mt-4 text-sm text-slate-500">

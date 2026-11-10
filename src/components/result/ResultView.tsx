@@ -259,7 +259,10 @@ export function ResultView() {
                 />
               </div>
               <div className="min-w-0">
-                <ChangeLog alteracoes={result.alteracoes} />
+                <ChangeLog
+                  alteracoes={result.alteracoes}
+                  avisos={result.meta.avisosValidacao}
+                />
               </div>
             </div>
           </div>

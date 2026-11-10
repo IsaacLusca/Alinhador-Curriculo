@@ -21,6 +21,7 @@ import {
   subscribeStorage,
 } from "@/lib/storage";
 import type { AlignmentResult } from "@/types/analysis";
+import type { OutputLanguage } from "@/lib/schemas";
 
 const MIN_JOB_LENGTH = 30;
 
@@ -71,6 +72,7 @@ export function AnalyzeForm() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [idiomaSaida, setIdiomaSaida] = useState<OutputLanguage>("pt-BR");
 
   useEffect(() => {
     if (!loading) return;
@@ -135,6 +137,7 @@ export function AnalyzeForm() {
         body: JSON.stringify({
           curriculoTexto: resumeText,
           vagaTexto: jobText,
+          idiomaSaida,
         }),
       });
 
@@ -239,25 +242,47 @@ export function AnalyzeForm() {
             à API do Gemini e o resultado fica salvo apenas no seu navegador.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleAnalyze}
-          disabled={!canAnalyze}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-600/30 transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Analisando...
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" aria-hidden />
-              Analisar alinhamento
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </>
-          )}
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div>
+            <label
+              htmlFor="idioma-saida"
+              className="block text-xs font-medium text-slate-600"
+            >
+              Idioma do currículo gerado
+            </label>
+            <select
+              id="idioma-saida"
+              value={idiomaSaida}
+              disabled={loading}
+              onChange={(event) =>
+                setIdiomaSaida(event.target.value as OutputLanguage)
+              }
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:opacity-70 sm:w-40"
+            >
+              <option value="pt-BR">Português</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={handleAnalyze}
+            disabled={!canAnalyze}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-600/30 transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Analisando...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" aria-hidden />
+                Analisar alinhamento
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {loading && (
