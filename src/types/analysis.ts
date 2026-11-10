@@ -1,6 +1,8 @@
 import type {
   AlignmentLevel,
-  AnalysisPayload,
+  AnalysisCore,
+  CategoryScores,
+  ChangeLogEntry,
   ContactInfo,
   Education,
   Experience,
@@ -42,6 +44,7 @@ export interface TailoredResume {
 export interface ResultMeta {
   geradoEm: string;
   modelo: string;
+  avisosValidacao?: string[];
 }
 
 export interface JobSummary {
@@ -50,11 +53,12 @@ export interface JobSummary {
   senioridade?: string;
 }
 
-export interface AlignmentResult
-  extends Omit<AnalysisPayload, "curriculo"> {
+export interface AlignmentResult extends Omit<AnalysisCore, "notas"> {
+  categorias: CategoryScores;
   score: number;
   nivel: AlignmentLevel;
   vaga: JobSummary;
   curriculo: TailoredResume;
+  alteracoes: ChangeLogEntry[];
   meta: ResultMeta;
 }

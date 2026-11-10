@@ -3,7 +3,7 @@ import { analyzeAlignment, ResumeExtractionError } from "@/lib/alignment";
 import { describeGeminiError } from "@/lib/gemini";
 import { analyzeRequestSchema } from "@/lib/schemas";
 
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
     const result = await analyzeAlignment(
       parsed.data.curriculoTexto,
       parsed.data.vagaTexto,
+      parsed.data.idiomaSaida,
     );
 
     return NextResponse.json(result);

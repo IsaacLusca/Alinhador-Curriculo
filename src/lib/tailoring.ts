@@ -1,9 +1,16 @@
 import type {
-  AnalysisPayload,
+  Adaptation,
+  AnalysisCore,
   JobProfile,
   MasterResume,
 } from "@/lib/schemas";
-import { classifyAlignment, computeAlignmentScore } from "@/lib/scoring";
+import {
+  applyMandatoryCap,
+  buildCategoryScores,
+  classifyAlignment,
+  computeAlignmentScore,
+} from "@/lib/scoring";
+import type { KeywordResult } from "@/lib/text";
 import type {
   AlignmentResult,
   TailoredExperience,
@@ -11,7 +18,10 @@ import type {
   TailoredSkillGroup,
 } from "@/types/analysis";
 
-function withIds<T extends object>(items: T[], prefix: string): (T & { id: string })[] {
+function withIds<T extends object>(
+  items: T[],
+  prefix: string,
+): (T & { id: string })[] {
   return items.map((item, index) => ({ ...item, id: `${prefix}-${index + 1}` }));
 }
 
@@ -36,9 +46,7 @@ function cleanExperience(
   };
 }
 
-function cleanProject(
-  project: TailoredProjectInput,
-): TailoredProjectInput {
+function cleanProject(project: TailoredProjectInput): TailoredProjectInput {
   return {
     ...project,
     nome: project.nome.trim(),
@@ -50,26 +58,48 @@ function cleanProject(
   };
 }
 
-export function buildAlignmentResult(
-  payload: AnalysisPayload,
-  masterResume: MasterResume,
-  jobProfile: JobProfile,
-  model: string,
-): AlignmentResult {
-  const score = computeAlignmentScore(payload.categorias);
+export interface BuildAlignmentResultInput {
+  master: MasterResume;
+  job: JobProfile;
+  analysis: AnalysisCore;
+  adaptacao: Adaptation;
+  keywords: KeywordResult;
+  modelo: string;
+  avisos: string[];
+}
+
+export function buildAlignmentResult({
+  master,
+  job,
+  analysis,
+  adaptacao,
+  keywords,
+  modelo,
+  avisos,
+}: BuildAlignmentResultInput): AlignmentResult {
+  const categorias = buildCategoryScores({
+    requisitos: analysis.requisitos,
+    notas: analysis.notas,
+    keywordsScore: keywords.score,
+    master,
+    job,
+  });
+
+  const rawScore = computeAlignmentScore(categorias);
+  const score = applyMandatoryCap(rawScore, analysis.requisitos);
 
   const experiencias = withIds(
-    payload.curriculo.experiencias.map(cleanExperience),
+    adaptacao.curriculo.experiencias.map(cleanExperience),
     "exp",
   ) as TailoredExperience[];
 
   const projetos = withIds(
-    payload.curriculo.projetos.map(cleanProject),
+    adaptacao.curriculo.projetos.map(cleanProject),
     "proj",
   ) as TailoredProject[];
 
   const skills = withIds(
-    payload.curriculo.skills.map((group) => ({
+    adaptacao.curriculo.skills.map((group) => ({
       ...group,
       categoria: group.categoria.trim(),
       itens: group.itens.map((item) => item.trim()).filter(Boolean),
@@ -77,32 +107,50 @@ export function buildAlignmentResult(
     "skill",
   ) as TailoredSkillGroup[];
 
+  const alteracoes = [...adaptacao.alteracoes];
+
+  if (avisos.length > 0) {
+    alteracoes.push({
+      tipo: "mantido",
+      alvo: "Validação de fidelidade",
+      detalhe: `${avisos.length} ajuste(s) automático(s) para manter o currículo fiel ao original.`,
+    });
+  }
+
   return {
-    ...payload,
+    resumo: analysis.resumo,
+    requisitos: analysis.requisitos,
+    gaps: analysis.gaps,
+    keywordsEncontradas: keywords.encontradas,
+    keywordsAusentes: keywords.ausentes,
+    recomendacoes: analysis.recomendacoes,
+    categorias,
     score,
     nivel: classifyAlignment(score),
     vaga: {
-      cargo: jobProfile.cargo,
-      empresa: jobProfile.empresa?.trim() || undefined,
-      senioridade: jobProfile.senioridade?.trim() || undefined,
+      cargo: job.cargo,
+      empresa: job.empresa?.trim() || undefined,
+      senioridade: job.senioridade?.trim() || undefined,
     },
     curriculo: {
-      nome: masterResume.nome,
-      titulo: payload.curriculo.titulo?.trim() || masterResume.titulo,
-      contato: masterResume.contato,
-      resumo: payload.curriculo.resumo?.trim(),
+      nome: master.nome,
+      titulo: adaptacao.curriculo.titulo?.trim() || master.titulo,
+      contato: master.contato,
+      resumo: adaptacao.curriculo.resumo?.trim(),
       experiencias,
       projetos,
       skills,
-      educacao: payload.curriculo.educacao,
-      idiomas: payload.curriculo.idiomas,
-      certificacoes: payload.curriculo.certificacoes
+      educacao: adaptacao.curriculo.educacao,
+      idiomas: adaptacao.curriculo.idiomas,
+      certificacoes: adaptacao.curriculo.certificacoes
         .map((item) => item.trim())
         .filter(Boolean),
     },
+    alteracoes,
     meta: {
       geradoEm: new Date().toISOString(),
-      modelo: model,
+      modelo,
+      avisosValidacao: avisos.length > 0 ? avisos : undefined,
     },
   };
 }

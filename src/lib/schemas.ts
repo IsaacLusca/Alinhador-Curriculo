@@ -21,6 +21,7 @@ export const changeTypeSchema = z.enum([
   "reescrito",
   "mantido",
 ]);
+export const outputLanguageSchema = z.enum(["pt-BR", "en"]);
 
 export const contactInfoSchema = z
   .object({
@@ -150,21 +151,31 @@ export const tailoredResumePayloadSchema = z.object({
 });
 
 export const categoryScoresSchema = z.object({
-  skills: z.number(),
-  experiencias: z.number(),
-  senioridade: z.number(),
-  formacaoIdiomas: z.number(),
-  keywords: z.number(),
+  skills: z.number().int().min(0).max(100),
+  experiencias: z.number().int().min(0).max(100),
+  senioridade: z.number().int().min(0).max(100),
+  formacaoIdiomas: z.number().int().min(0).max(100),
+  keywords: z.number().int().min(0).max(100),
 });
 
-export const analysisPayloadSchema = z.object({
+export const modelNotesSchema = z.object({
+  skills: z.number().int().min(0).max(100),
+  experiencias: z.number().int().min(0).max(100),
+  senioridade: z.number().int().min(0).max(100),
+  formacaoIdiomas: z.number().int().min(0).max(100),
+});
+
+export const analysisCoreSchema = z.object({
   resumo: z.string(),
-  categorias: categoryScoresSchema,
   requisitos: z.array(requirementMatchSchema).default([]),
   gaps: z.array(z.string()).default([]),
   keywordsEncontradas: z.array(z.string()).default([]),
   keywordsAusentes: z.array(z.string()).default([]),
+  notas: modelNotesSchema,
   recomendacoes: developmentRecommendationsSchema,
+});
+
+export const adaptationSchema = z.object({
   curriculo: tailoredResumePayloadSchema,
   alteracoes: z.array(changeLogEntrySchema).default([]),
 });
@@ -180,11 +191,15 @@ export const analyzeRequestSchema = z.object({
     .trim()
     .min(30, "Cole a descrição completa da vaga.")
     .max(60000, "A descrição da vaga é muito grande para ser analisada."),
+  idiomaSaida: outputLanguageSchema.default("pt-BR"),
 });
 
 export type MasterResume = z.infer<typeof masterResumeSchema>;
 export type JobProfile = z.infer<typeof jobProfileSchema>;
-export type AnalysisPayload = z.infer<typeof analysisPayloadSchema>;
+export type AnalysisCore = z.infer<typeof analysisCoreSchema>;
+export type Adaptation = z.infer<typeof adaptationSchema>;
+export type ModelNotes = z.infer<typeof modelNotesSchema>;
+export type OutputLanguage = z.infer<typeof outputLanguageSchema>;
 export type CategoryScores = z.infer<typeof categoryScoresSchema>;
 export type RequirementMatch = z.infer<typeof requirementMatchSchema>;
 export type DevelopmentRecommendations = z.infer<
@@ -208,6 +223,11 @@ export type ContactInfo = z.infer<typeof contactInfoSchema>;
 
 const jsonString = { type: "string" } as const;
 const jsonStringArray = { type: "array", items: jsonString } as const;
+const jsonScore = {
+  type: "integer",
+  minimum: 0,
+  maximum: 100,
+} as const;
 
 export const masterResumeJsonSchema = {
   type: "object",
@@ -336,220 +356,226 @@ export const jobProfileJsonSchema = {
   required: ["cargo", "requisitos"],
 } as const;
 
-export const analysisPayloadJsonSchema = {
+const requirementMatchJsonSchema = {
   type: "object",
   properties: {
-    resumo: jsonString,
-    categorias: {
-      type: "object",
-      properties: {
-        skills: { type: "number" },
-        experiencias: { type: "number" },
-        senioridade: { type: "number" },
-        formacaoIdiomas: { type: "number" },
-        keywords: { type: "number" },
-      },
-      required: [
-        "skills",
-        "experiencias",
-        "senioridade",
-        "formacaoIdiomas",
-        "keywords",
+    descricao: jsonString,
+    tipo: {
+      type: "string",
+      enum: [
+        "skill",
+        "experiencia",
+        "formacao",
+        "idioma",
+        "comportamental",
+        "outro",
       ],
     },
-    requisitos: {
+    obrigatorio: { type: "boolean" },
+    status: {
+      type: "string",
+      enum: ["atende", "parcial", "ausente"],
+    },
+    evidencia: jsonString,
+    prioridade: {
+      type: "string",
+      enum: ["alta", "media", "baixa"],
+    },
+  },
+  required: [
+    "descricao",
+    "tipo",
+    "obrigatorio",
+    "status",
+    "evidencia",
+    "prioridade",
+  ],
+} as const;
+
+const recommendationsJsonSchema = {
+  type: "object",
+  properties: {
+    ferramentas: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          descricao: jsonString,
-          tipo: {
-            type: "string",
-            enum: [
-              "skill",
-              "experiencia",
-              "formacao",
-              "idioma",
-              "comportamental",
-              "outro",
-            ],
-          },
-          obrigatorio: { type: "boolean" },
-          status: {
-            type: "string",
-            enum: ["atende", "parcial", "ausente"],
-          },
-          evidencia: jsonString,
+          nome: jsonString,
+          motivo: jsonString,
           prioridade: {
             type: "string",
             enum: ["alta", "media", "baixa"],
           },
         },
-        required: [
-          "descricao",
-          "tipo",
-          "obrigatorio",
-          "status",
-          "evidencia",
-          "prioridade",
-        ],
+        required: ["nome", "motivo", "prioridade"],
       },
     },
-    gaps: jsonStringArray,
-    keywordsEncontradas: jsonStringArray,
-    keywordsAusentes: jsonStringArray,
-    recomendacoes: {
-      type: "object",
-      properties: {
-        ferramentas: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              nome: jsonString,
-              motivo: jsonString,
-              prioridade: {
-                type: "string",
-                enum: ["alta", "media", "baixa"],
-              },
-            },
-            required: ["nome", "motivo", "prioridade"],
-          },
-        },
-        projetos: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              titulo: jsonString,
-              descricao: jsonString,
-              stack: jsonStringArray,
-              entregaveis: jsonStringArray,
-              cobreGaps: jsonStringArray,
-            },
-            required: [
-              "titulo",
-              "descricao",
-              "stack",
-              "entregaveis",
-              "cobreGaps",
-            ],
-          },
-        },
-      },
-      required: ["ferramentas", "projetos"],
-    },
-    curriculo: {
-      type: "object",
-      properties: {
-        titulo: jsonString,
-        resumo: jsonString,
-        experiencias: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              empresa: jsonString,
-              cargo: jsonString,
-              periodo: jsonString,
-              local: jsonString,
-              bullets: jsonStringArray,
-              incluido: { type: "boolean" },
-              motivo: jsonString,
-            },
-            required: ["empresa", "cargo", "bullets", "incluido"],
-          },
-        },
-        projetos: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              nome: jsonString,
-              descricao: jsonString,
-              tecnologias: jsonStringArray,
-              bullets: jsonStringArray,
-              link: jsonString,
-              incluido: { type: "boolean" },
-              motivo: jsonString,
-            },
-            required: ["nome", "tecnologias", "bullets", "incluido"],
-          },
-        },
-        skills: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              categoria: jsonString,
-              itens: jsonStringArray,
-              incluido: { type: "boolean" },
-            },
-            required: ["categoria", "itens", "incluido"],
-          },
-        },
-        educacao: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              instituicao: jsonString,
-              curso: jsonString,
-              periodo: jsonString,
-              status: jsonString,
-            },
-            required: ["instituicao", "curso"],
-          },
-        },
-        idiomas: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              idioma: jsonString,
-              nivel: jsonString,
-            },
-            required: ["idioma"],
-          },
-        },
-        certificacoes: jsonStringArray,
-      },
-      required: [
-        "titulo",
-        "resumo",
-        "experiencias",
-        "projetos",
-        "skills",
-        "educacao",
-        "idiomas",
-        "certificacoes",
-      ],
-    },
-    alteracoes: {
+    projetos: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          tipo: {
-            type: "string",
-            enum: ["removido", "reordenado", "reescrito", "mantido"],
-          },
-          alvo: jsonString,
-          detalhe: jsonString,
+          titulo: jsonString,
+          descricao: jsonString,
+          stack: jsonStringArray,
+          entregaveis: jsonStringArray,
+          cobreGaps: jsonStringArray,
         },
-        required: ["tipo", "alvo", "detalhe"],
+        required: [
+          "titulo",
+          "descricao",
+          "stack",
+          "entregaveis",
+          "cobreGaps",
+        ],
       },
     },
   },
+  required: ["ferramentas", "projetos"],
+} as const;
+
+export const analysisCoreJsonSchema = {
+  type: "object",
+  properties: {
+    resumo: jsonString,
+    requisitos: {
+      type: "array",
+      items: requirementMatchJsonSchema,
+    },
+    gaps: jsonStringArray,
+    keywordsEncontradas: jsonStringArray,
+    keywordsAusentes: jsonStringArray,
+    notas: {
+      type: "object",
+      properties: {
+        skills: jsonScore,
+        experiencias: jsonScore,
+        senioridade: jsonScore,
+        formacaoIdiomas: jsonScore,
+      },
+      required: ["skills", "experiencias", "senioridade", "formacaoIdiomas"],
+    },
+    recomendacoes: recommendationsJsonSchema,
+  },
   required: [
     "resumo",
-    "categorias",
     "requisitos",
     "gaps",
     "keywordsEncontradas",
     "keywordsAusentes",
+    "notas",
     "recomendacoes",
-    "curriculo",
-    "alteracoes",
   ],
+} as const;
+
+const tailoredResumeJsonSchema = {
+  type: "object",
+  properties: {
+    titulo: jsonString,
+    resumo: jsonString,
+    experiencias: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          empresa: jsonString,
+          cargo: jsonString,
+          periodo: jsonString,
+          local: jsonString,
+          bullets: jsonStringArray,
+          incluido: { type: "boolean" },
+          motivo: jsonString,
+        },
+        required: ["empresa", "cargo", "bullets", "incluido"],
+      },
+    },
+    projetos: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          nome: jsonString,
+          descricao: jsonString,
+          tecnologias: jsonStringArray,
+          bullets: jsonStringArray,
+          link: jsonString,
+          incluido: { type: "boolean" },
+          motivo: jsonString,
+        },
+        required: ["nome", "tecnologias", "bullets", "incluido"],
+      },
+    },
+    skills: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          categoria: jsonString,
+          itens: jsonStringArray,
+          incluido: { type: "boolean" },
+        },
+        required: ["categoria", "itens", "incluido"],
+      },
+    },
+    educacao: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          instituicao: jsonString,
+          curso: jsonString,
+          periodo: jsonString,
+          status: jsonString,
+        },
+        required: ["instituicao", "curso"],
+      },
+    },
+    idiomas: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          idioma: jsonString,
+          nivel: jsonString,
+        },
+        required: ["idioma"],
+      },
+    },
+    certificacoes: jsonStringArray,
+  },
+  required: [
+    "titulo",
+    "resumo",
+    "experiencias",
+    "projetos",
+    "skills",
+    "educacao",
+    "idiomas",
+    "certificacoes",
+  ],
+} as const;
+
+const changeLogJsonSchema = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      tipo: {
+        type: "string",
+        enum: ["removido", "reordenado", "reescrito", "mantido"],
+      },
+      alvo: jsonString,
+      detalhe: jsonString,
+    },
+    required: ["tipo", "alvo", "detalhe"],
+  },
+} as const;
+
+export const adaptationJsonSchema = {
+  type: "object",
+  properties: {
+    curriculo: tailoredResumeJsonSchema,
+    alteracoes: changeLogJsonSchema,
+  },
+  required: ["curriculo", "alteracoes"],
 } as const;
