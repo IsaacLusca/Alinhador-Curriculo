@@ -8,7 +8,7 @@ import {
   type JobProfile,
   type MasterResume,
 } from "@/lib/schemas";
-import { generateJson, getModelName } from "@/lib/gemini";
+import { generateJson } from "@/lib/gemini";
 import {
   SYSTEM_ANALYZE,
   SYSTEM_EXTRACT_JOB,
@@ -23,7 +23,7 @@ import type { AlignmentResult } from "@/types/analysis";
 export class ResumeExtractionError extends Error {}
 
 async function extractMasterResume(texto: string): Promise<MasterResume> {
-  const resume = await generateJson({
+  const { data: resume } = await generateJson({
     sistema: SYSTEM_EXTRACT_RESUME,
     prompt: buildExtractResumePrompt(texto),
     jsonSchema: masterResumeJsonSchema,
@@ -46,13 +46,15 @@ async function extractMasterResume(texto: string): Promise<MasterResume> {
 }
 
 async function extractJobProfile(texto: string): Promise<JobProfile> {
-  return generateJson({
+  const { data } = await generateJson({
     sistema: SYSTEM_EXTRACT_JOB,
     prompt: buildExtractJobPrompt(texto),
     jsonSchema: jobProfileJsonSchema,
     schema: jobProfileSchema,
     temperatura: 0.1,
   });
+
+  return data;
 }
 
 export async function analyzeAlignment(
@@ -64,7 +66,7 @@ export async function analyzeAlignment(
     extractJobProfile(vagaTexto),
   ]);
 
-  const payload = await generateJson({
+  const { data: payload, modelo } = await generateJson({
     sistema: SYSTEM_ANALYZE,
     prompt: buildAnalyzePrompt(masterResume, jobProfile),
     jsonSchema: analysisPayloadJsonSchema,
@@ -72,10 +74,5 @@ export async function analyzeAlignment(
     temperatura: 0.3,
   });
 
-  return buildAlignmentResult(
-    payload,
-    masterResume,
-    jobProfile,
-    getModelName(),
-  );
+  return buildAlignmentResult(payload, masterResume, jobProfile, modelo);
 }
