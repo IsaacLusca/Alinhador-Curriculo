@@ -45,6 +45,8 @@ export interface ResultMeta {
   geradoEm: string;
   modelo: string;
   avisosValidacao?: string[];
+  docxId?: string;
+  docxFileName?: string;
 }
 
 export interface JobSummary {

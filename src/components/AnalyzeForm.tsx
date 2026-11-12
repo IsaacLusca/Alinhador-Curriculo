@@ -11,10 +11,13 @@ import {
 } from "lucide-react";
 import { ResumeUpload } from "@/components/ResumeUpload";
 import { DocxParseError, extractTextFromDocx } from "@/lib/docx-parser";
+import { deleteDocxFile, saveDocxFile } from "@/lib/docx-store";
 import {
   getJobText,
+  getResultRaw,
   getResumeText,
   getServerSnapshot,
+  parseStoredResult,
   setJobText,
   setResumeText,
   setStoredResult,
@@ -66,6 +69,7 @@ export function AnalyzeForm() {
     getServerSnapshot,
   );
   const [fileName, setFileName] = useState<string | null>(null);
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [parsing, setParsing] = useState(false);
   const [resumeError, setResumeError] = useState<string | null>(null);
@@ -103,6 +107,7 @@ export function AnalyzeForm() {
       const parsed = await extractTextFromDocx(file);
       setResumeText(parsed.text);
       setFileName(parsed.fileName);
+      setOriginalFile(file);
       setWarnings(parsed.warnings);
     } catch (parseError) {
       console.error(parseError);
@@ -119,6 +124,7 @@ export function AnalyzeForm() {
   const handleResumeReset = () => {
     setResumeText("");
     setFileName(null);
+    setOriginalFile(null);
     setWarnings([]);
     setResumeError(null);
   };
@@ -154,7 +160,38 @@ export function AnalyzeForm() {
         throw new Error(message);
       }
 
-      setStoredResult(data as AlignmentResult);
+      const parsedResult = data as AlignmentResult;
+      let resultToStore = parsedResult;
+
+      if (originalFile) {
+        try {
+          const previousResult = parseStoredResult(getResultRaw());
+          const docxId = crypto.randomUUID();
+
+          await saveDocxFile({
+            id: docxId,
+            fileName: originalFile.name,
+            bytes: await originalFile.arrayBuffer(),
+          });
+
+          if (previousResult?.meta.docxId) {
+            void deleteDocxFile(previousResult.meta.docxId);
+          }
+
+          resultToStore = {
+            ...parsedResult,
+            meta: {
+              ...parsedResult.meta,
+              docxId,
+              docxFileName: originalFile.name,
+            },
+          };
+        } catch (storageError) {
+          console.error("Não foi possível guardar o DOCX original:", storageError);
+        }
+      }
+
+      setStoredResult(resultToStore);
       router.push("/resultado");
     } catch (analysisError) {
       console.error(analysisError);
