@@ -414,6 +414,174 @@ function projectHasOutsideTerms(
   );
 }
 
+function orderExperiencesByMaster(
+  items: PayloadExperience[],
+  master: MasterResume,
+): { items: PayloadExperience[]; missing: number } {
+  const used = new Set<number>();
+  let missing = 0;
+
+  const ordered = master.experiencias.map((masterExperience) => {
+    const exact = items.findIndex(
+      (item, index) =>
+        !used.has(index) &&
+        normalizeComparable(item.empresa) ===
+          normalizeComparable(masterExperience.empresa) &&
+        normalizeComparable(item.cargo) ===
+          normalizeComparable(masterExperience.cargo),
+    );
+    const byCompany =
+      exact >= 0
+        ? exact
+        : items.findIndex(
+            (item, index) =>
+              !used.has(index) &&
+              normalizeComparable(item.empresa) ===
+                normalizeComparable(masterExperience.empresa),
+          );
+
+    if (byCompany >= 0) {
+      used.add(byCompany);
+      return items[byCompany];
+    }
+
+    missing += 1;
+
+    return {
+      empresa: masterExperience.empresa,
+      cargo: masterExperience.cargo,
+      periodo: masterExperience.periodo,
+      local: masterExperience.local,
+      bullets: masterExperience.bullets,
+      incluido: false,
+      motivo: "Não retornado pela IA; preservado como não incluído.",
+    } satisfies PayloadExperience;
+  });
+
+  return { items: ordered, missing };
+}
+
+function orderProjectsByMaster(
+  items: PayloadProject[],
+  master: MasterResume,
+): { items: PayloadProject[]; missing: number } {
+  const used = new Set<number>();
+  let missing = 0;
+
+  const ordered = master.projetos.map((masterProject) => {
+    const index = items.findIndex(
+      (item, itemIndex) =>
+        !used.has(itemIndex) &&
+        normalizeComparable(item.nome) === normalizeComparable(masterProject.nome),
+    );
+
+    if (index >= 0) {
+      used.add(index);
+      return items[index];
+    }
+
+    missing += 1;
+
+    return {
+      nome: masterProject.nome,
+      descricao: masterProject.descricao,
+      tecnologias: masterProject.tecnologias,
+      bullets: masterProject.bullets,
+      link: masterProject.link,
+      incluido: false,
+      motivo: "Não retornado pela IA; preservado como não incluído.",
+    } satisfies PayloadProject;
+  });
+
+  return { items: ordered, missing };
+}
+
+function orderSkillsByMaster(
+  items: Adaptation["curriculo"]["skills"],
+  master: MasterResume,
+): { items: Adaptation["curriculo"]["skills"]; missing: number } {
+  const used = new Set<number>();
+  let missing = 0;
+
+  const ordered = master.skills.map((masterGroup) => {
+    const index = items.findIndex(
+      (item, itemIndex) =>
+        !used.has(itemIndex) &&
+        normalizeComparable(item.categoria) ===
+          normalizeComparable(masterGroup.categoria),
+    );
+
+    if (index >= 0) {
+      used.add(index);
+      return items[index];
+    }
+
+    missing += 1;
+
+    return {
+      categoria: masterGroup.categoria,
+      itens: masterGroup.itens,
+      incluido: false,
+    };
+  });
+
+  return { items: ordered, missing };
+}
+
+function orderEducationByMaster(
+  items: Education[],
+  master: MasterResume,
+): { items: Education[]; missing: number } {
+  const used = new Set<number>();
+  let missing = 0;
+
+  const ordered = master.educacao.map((masterEducation) => {
+    const index = items.findIndex(
+      (item, itemIndex) =>
+        !used.has(itemIndex) &&
+        normalizeComparable(item.curso) ===
+          normalizeComparable(masterEducation.curso),
+    );
+
+    if (index >= 0) {
+      used.add(index);
+      return items[index];
+    }
+
+    missing += 1;
+    return masterEducation;
+  });
+
+  return { items: ordered, missing };
+}
+
+function orderLanguagesByMaster(
+  items: Language[],
+  master: MasterResume,
+): { items: Language[]; missing: number } {
+  const used = new Set<number>();
+  let missing = 0;
+
+  const ordered = master.idiomas.map((masterLanguage) => {
+    const index = items.findIndex(
+      (item, itemIndex) =>
+        !used.has(itemIndex) &&
+        normalizeComparable(item.idioma) ===
+          normalizeComparable(masterLanguage.idioma),
+    );
+
+    if (index >= 0) {
+      used.add(index);
+      return items[index];
+    }
+
+    missing += 1;
+    return masterLanguage;
+  });
+
+  return { items: ordered, missing };
+}
+
 export function sanitizeAdaptation(
   adaptation: Adaptation,
   master: MasterResume,
@@ -645,15 +813,34 @@ export function sanitizeAdaptation(
     ),
   );
 
+  const orderedExperiences = orderExperiencesByMaster(experiencias, master);
+  const orderedProjects = orderProjectsByMaster(projetos, master);
+  const orderedSkills = orderSkillsByMaster(skills, master);
+  const orderedEducation = orderEducationByMaster(educacao, master);
+  const orderedLanguages = orderLanguagesByMaster(idiomas, master);
+
+  const missingCount =
+    orderedExperiences.missing +
+    orderedProjects.missing +
+    orderedSkills.missing +
+    orderedEducation.missing +
+    orderedLanguages.missing;
+
+  if (missingCount > 0) {
+    warn(
+      `${missingCount} item(ns) não retornado(s) pela IA foram preservados do currículo mestre.`,
+    );
+  }
+
   return {
     adaptacao: {
       curriculo: {
         ...adaptation.curriculo,
-        experiencias,
-        projetos,
-        skills,
-        educacao,
-        idiomas,
+        experiencias: orderedExperiences.items,
+        projetos: orderedProjects.items,
+        skills: orderedSkills.items,
+        educacao: orderedEducation.items,
+        idiomas: orderedLanguages.items,
         certificacoes,
       },
       alteracoes: adaptation.alteracoes,
