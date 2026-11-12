@@ -6,7 +6,7 @@ Envie seu currículo mestre em `.docx`, cole a descrição de uma vaga e receba:
 - **Tabela requisito × evidência** mostrando o que você atende, atende parcialmente e o que falta.
 - **Currículo adaptado**: o conteúdo é enxugado para a vaga, com experiências, projetos e habilidades irrelevantes removidos e bullets reescritos.
 - **Recomendações de desenvolvimento**: tecnologias para aprender e ideias de projeto de portfólio que cobrem as lacunas.
-- **Exportação em PDF e DOCX** do currículo final, já com suas edições e remoções.
+- **Exportação em DOCX fiel**: as edições são aplicadas sobre o seu arquivo original, preservando fonte, margens, bullets e layout. Também há exportação em DOCX com layout limpo e PDF.
 
 O currículo adaptado usa **somente fatos do currículo mestre**. Nada é inventado: o que falta vira recomendação, nunca experiência fictícia.
 
@@ -38,7 +38,8 @@ Variáveis de ambiente:
 3. Escolha o idioma do currículo gerado (português ou inglês).
 4. Clique em **Analisar alinhamento**.
 5. Revise o diagnóstico e as recomendações.
-6. Na aba **Currículo alinhado**, ajuste textos, reative ou remova itens e baixe em **PDF** ou **DOCX**.
+6. Na aba **Currículo alinhado**, ajuste textos, reative ou remova itens e baixe em **DOCX fiel**, **DOCX limpo** ou **PDF**.
+7. O DOCX fiel usa o arquivo original guardado no navegador. Se os dados do site forem apagados, reanexe o `.docx` na mesma tela antes de exportar.
 
 ## Como funciona
 
@@ -61,12 +62,14 @@ Variáveis de ambiente:
    Requisitos obrigatórios ausentes aplicam um teto ao score final (69 com 1 ausência, 54 com 2 ou mais).
 
 4. As respostas usam JSON Schema + validação Zod. Antes de exibir o resultado, uma camada de fidelidade verifica no código se evidências são trechos literais do mestre, se empresas/cargos/datas/formações/idiomas foram preservados e se tecnologias não foram movidas entre itens. Se houver violação, uma chamada curta de reparo tenta corrigir; se ainda falhar, o item original do mestre é restaurado.
-5. Se o modelo principal estiver indisponível (erro 503/429), a análise tenta automaticamente os modelos de fallback.
-6. Os dados ficam no `localStorage` do navegador. Não há banco de dados.
+5. O **DOCX fiel** é gerado no navegador: o arquivo original é guardado no IndexedDB e o app edita `word/document.xml` diretamente. Itens desmarcados são removidos, bullets são reescritos no mesmo parágrafo (preservando o marcador e o estilo) e competências filtradas mantêm o rótulo. Tabelas, caixas de texto, colunas e alterações controladas não são suportadas nesse modo; nesses casos use o DOCX limpo.
+6. Se o modelo principal estiver indisponível (erro 503/429), a análise tenta automaticamente os modelos de fallback.
+7. Resultados e textos ficam no `localStorage`; o DOCX original fica no IndexedDB do navegador. Não há banco de dados no servidor.
 
 ## Privacidade
 
 - O arquivo `.docx` é processado localmente no navegador.
+- O arquivo original fica no IndexedDB do navegador para permitir a exportação fiel; ele não é enviado ao servidor.
 - Apenas o texto extraído é enviado à API do Gemini para a análise.
 - Resultados e textos ficam salvos somente no seu navegador.
 - A chave da API nunca é exposta ao cliente.
@@ -77,7 +80,7 @@ Variáveis de ambiente:
 - Tailwind CSS 4
 - Google Gemini (`@google/genai`)
 - Zod para validação
-- `mammoth` para leitura de DOCX e `docx` para geração de DOCX
+- `mammoth` para leitura de DOCX, `docx` para o layout limpo e `jszip` para editar o DOCX original
 - `@react-pdf/renderer` para geração de PDF
 - `lucide-react` para ícones
 
@@ -104,7 +107,10 @@ src/
     limits.ts              # limites de conteúdo por nível da vaga
     tailoring.ts           # montagem do resultado final
     docx-parser.ts         # leitura do DOCX no navegador
-    export-docx.ts         # geração de DOCX
+    docx-structure.ts      # seções, itens e âncoras do DOCX
+    docx-editor.ts         # edição do XML original preservando a formatação
+    docx-store.ts          # arquivo original no IndexedDB
+    export-docx.ts         # DOCX fiel + fallback de layout limpo
     export-pdf.tsx         # geração de PDF
     storage.ts             # persistência local
   types/
@@ -124,7 +130,10 @@ npm run typecheck  # checagem de tipos
 ## Limitações
 
 - Apenas `.docx` é aceito (`.doc` antigo não é suportado).
-- Currículos com layouts muito complexos (tabelas, múltiplas colunas) podem perder estrutura na leitura; o texto extraído é editável antes da análise.
+- O DOCX fiel funciona em currículos lineares, como o modelo testado. Tabelas, caixas de texto, colunas, alterações controladas e controles de conteúdo caem no DOCX limpo.
+- Em parágrafos reescritos, a formatação inline mista pode ser uniformizada; o estilo do parágrafo, a fonte e o marcador do bullet são preservados.
+- Se você limpar os dados do navegador, o DOCX original é perdido; reanexe o arquivo na tela de resultado para exportar novamente com fidelidade.
+- O PDF atual usa o layout limpo. A conversão fiel do DOCX para PDF fica para uma próxima etapa.
 - A IA pode errar. A validação de fidelidade reduz o risco e restaura dados do mestre, mas revise sempre o currículo antes de enviar a um recrutador.
 - O free tier do Gemini tem limites de requisições por minuto/dia.
 - Os limites de score (75/45) ainda não foram calibrados com um conjunto grande de vagas; ajuste em `src/lib/scoring.ts` se necessário.
