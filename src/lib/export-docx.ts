@@ -12,7 +12,8 @@ import {
   prepareResumeForExport,
   type ExportableResume,
 } from "@/lib/resume-export";
-import type { TailoredResume } from "@/types/analysis";
+import { editDocxWithResume, faithfulDocxFileName } from "@/lib/docx-editor";
+import type { AlignmentResult, TailoredResume } from "@/types/analysis";
 
 function sectionHeading(text: string): Paragraph {
   return new Paragraph({
@@ -276,4 +277,18 @@ export async function downloadResumeDocx(
   const document = buildDocument(data);
   const blob = await Packer.toBlob(document);
   downloadBlob(blob, buildResumeFileName(data.nome, "docx"));
+}
+
+/**
+ * Aplica as edições sobre o DOCX original, preservando a formatação.
+ * Retorna avisos não fatais (ex.: título não encontrado).
+ */
+export async function downloadFaithfulDocx(
+  bytes: ArrayBuffer,
+  result: AlignmentResult,
+  originalFileName: string,
+): Promise<string[]> {
+  const { blob, warnings } = await editDocxWithResume(bytes, result);
+  downloadBlob(blob, faithfulDocxFileName(originalFileName));
+  return warnings;
 }
